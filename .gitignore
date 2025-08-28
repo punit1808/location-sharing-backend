@@ -13,7 +13,7 @@ target/
 .settings
 .springBeans
 .sts4-cache
-.jks
+src/main/resources/certs/client.truststore.jks
 
 ### IntelliJ IDEA ###
 .idea

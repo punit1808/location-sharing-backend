@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 import com.example.location.dto.CreateGrp;
 import com.example.location.dto.AddUser;
+import com.example.location.dto.DeleteGrp;
 
 // from here we can create groups and get users in a group
 
@@ -40,14 +41,14 @@ public class GroupController {
     }
 
     @DeleteMapping("/delete")
-    public ResponseEntity<String> deleteGroup(@RequestParam String userId,@RequestParam String groupId) {
-        groupService.deleteGroup(java.util.UUID.fromString(groupId),java.util.UUID.fromString(userId));
+    public ResponseEntity<String> deleteGroup(@RequestBody DeleteGrp delGrp) {
+        groupService.deleteGroup(delGrp.getGroupId(),delGrp.getUserId());
         return ResponseEntity.ok("Group deleted");
     }
 
     @DeleteMapping("/removeUser")
-    public ResponseEntity<String> removeUserFromGroup(@RequestParam String removedBy,@RequestParam String groupId, @RequestParam String userId) {
-        groupService.removeUserFromGroup(java.util.UUID.fromString(removedBy),java.util.UUID.fromString(groupId), java.util.UUID.fromString(userId));
+    public ResponseEntity<String> removeUserFromGroup(@RequestBody DeleteGrp delGrp) {
+        groupService.removeUserFromGroup(delGrp.getRemovedBy(),delGrp.getGroupId(), delGrp.getUserId());
         return ResponseEntity.ok("User removed from group");
     }
 
