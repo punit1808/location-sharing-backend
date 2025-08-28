@@ -1,8 +1,8 @@
 package com.example.location.kafka;
-
 import com.example.location.dto.LocationUpdateRequest;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+
 
 @Service
 public class LocationProducer {

@@ -1,8 +1,6 @@
 package com.example.location.dto;
-
 import java.util.UUID;
 
-import org.springframework.web.bind.annotation.RequestParam;
 
 public class AddUser {
     UUID addedBy;

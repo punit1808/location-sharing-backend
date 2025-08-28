@@ -8,5 +8,4 @@ import com.example.location.entity.GroupEntity;
 
 public interface GroupRepository extends JpaRepository<GroupEntity, UUID> {
 
-    boolean existsById(UUID id);
 }

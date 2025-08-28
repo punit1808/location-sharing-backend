@@ -11,7 +11,23 @@ public class LocationEntity {
     @Id
     @GeneratedValue
     @Column(nullable = false, updatable = false)
-    private UUID userId;  // PRIMARY KEY = user_id (only one row per user)
+    private UUID userId;  
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
+    }
+
+    public void setLatitude(double latitude) {
+        this.latitude = latitude;
+    }
+
+    public void setLongitude(double longitude) {
+        this.longitude = longitude;
+    }
 
     @OneToOne
     @MapsId

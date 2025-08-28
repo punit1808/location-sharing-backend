@@ -4,10 +4,7 @@ import com.example.location.entity.GroupEntity;
 import com.example.location.service.GroupService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 import java.util.UUID;
-
 import com.example.location.dto.CreateGrp;
 import com.example.location.dto.AddUser;
 

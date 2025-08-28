@@ -9,9 +9,7 @@ import com.example.location.kafka.LocationProducer;
 import com.example.location.repository.GroupRepository;
 import com.example.location.repository.LocationRepository;
 import org.springframework.stereotype.Service;
-
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class LocationService {

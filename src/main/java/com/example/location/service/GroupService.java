@@ -9,8 +9,6 @@ import com.example.location.entity.UserEntity;
 import com.example.location.repository.GroupMemberRepository;
 import com.example.location.repository.UserRepository;
 import jakarta.transaction.Transactional;
-
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -99,7 +97,7 @@ public class GroupService {
     }
 
     public boolean removeUserFromGroup( UUID removedBy,UUID groupId, UUID userId) {
-        GroupEntity group = groupRepository.findById(groupId)
+        groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found"));
 
         
