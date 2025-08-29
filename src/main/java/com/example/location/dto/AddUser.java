@@ -1,35 +1,36 @@
 package com.example.location.dto;
-import java.util.UUID;
-
 
 public class AddUser {
-    UUID addedBy;
-    UUID groupId;
-    UUID userId;
+    String addedBy;
+    String groupId;
+    String userId;
     String role;
-    
-    public AddUser(UUID addedBy, UUID groupId, UUID userId, String role) {
+
+
+    public AddUser(String addedBy, String groupId, String userId, String role) {
         this.addedBy = addedBy;
         this.groupId = groupId;
         this.userId = userId;
         this.role = role;
     }
-    public UUID getAddedBy() {
+    public AddUser() {
+    }
+    public String getAddedBy() {
         return addedBy;
     }
-    public void setAddedBy(UUID addedBy) {
+    public void setAddedBy(String addedBy) {
         this.addedBy = addedBy;
     }
-    public UUID getGroupId() {
+    public String getGroupId() {
         return groupId;
     }
-    public void setGroupId(UUID groupId) {
+    public void setGroupId(String groupId) {
         this.groupId = groupId;
     }
-    public UUID getUserId() {
+    public String getUserId() {
         return userId;
     }
-    public void setUserId(UUID userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
     public String getRole() {
@@ -38,4 +39,5 @@ public class AddUser {
     public void setRole(String role) {
         this.role = role;
     }
+    
 }

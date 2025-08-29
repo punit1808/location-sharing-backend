@@ -6,6 +6,14 @@ import java.util.UUID;
 public class LocationUpdateRequest {
     private UUID userId;
     private double lat;
+    
+    public LocationUpdateRequest(UUID userId, double lat, double lng) {
+        this.userId = userId;
+        this.lat = lat;
+        this.lng = lng;
+    }
+    public LocationUpdateRequest() {
+    }
     private double lng;
 
     // getters and setters

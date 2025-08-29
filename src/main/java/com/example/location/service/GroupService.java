@@ -8,20 +8,24 @@ import com.example.location.entity.GroupMemberId;
 import com.example.location.entity.UserEntity;
 import com.example.location.repository.GroupMemberRepository;
 import com.example.location.repository.UserRepository;
+import com.example.location.cache.LocationCache;
 import jakarta.transaction.Transactional;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 @Service
 public class GroupService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository memberRepository;
     private final UserRepository userRepository;
+    private final LocationCache locationCache;
 
-    public GroupService(GroupRepository groupRepository, GroupMemberRepository memberRepository, UserRepository userRepository) {
+    public GroupService(GroupRepository groupRepository, GroupMemberRepository memberRepository, UserRepository userRepository, LocationCache locationCache) {
         this.groupRepository = groupRepository;
         this.memberRepository = memberRepository;
         this.userRepository = userRepository;
+        this.locationCache = locationCache;
     }
 
     @Transactional
@@ -37,6 +41,7 @@ public class GroupService {
 
         // ✅ Flush to DB so groupId is available before next query
         groupRepository.flush();
+        locationCache.mapGrpToUser(creatorId, group.getId());
 
         GroupMemberEntity member = new GroupMemberEntity();
         member.setId(new GroupMemberId(group.getId(), creatorId)); // ✅ set composite key
@@ -66,9 +71,10 @@ public class GroupService {
         member.setId(new GroupMemberId(group.getId(), user.getId())); // ✅ set composite key
         member.setGroup(group);
         member.setUser(user);
-        member.setRole("ADMIN");
+        member.setRole(role);
 
         memberRepository.save(member);
+        locationCache.mapGrpToUser(userId, group.getId());
 
     }
 
@@ -81,45 +87,98 @@ public class GroupService {
         return memberOpt.map(member -> "ADMIN".equals(member.getRole())).orElse(false);
     }
 
+    @Transactional
     public boolean deleteGroup(UUID groupId, UUID requesterId) {
         GroupEntity group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found"));
 
         GroupMemberId currUser = new GroupMemberId(requesterId, groupId);
-        
-        if(!memberRepository.existsById(currUser) || !isUserAdmin(groupId, requesterId)) {
+
+        if (!memberRepository.existsById(currUser) || !isUserAdmin(groupId, requesterId)) {
             throw new RuntimeException("Only admins can delete the group");
         }
 
+        // 1️⃣ Delete from DB
         memberRepository.deleteAllByGroupId(groupId);
         groupRepository.delete(group);
+
+        // 2️⃣ Clean up cache
+        // remove all members belonging to this group
+        locationCache.removeGroup(groupId);
+
         return true;
     }
 
-    public boolean removeUserFromGroup( UUID removedBy,UUID groupId, UUID userId) {
+    @Transactional
+    public boolean removeUserFromGroup(UUID removedBy, UUID groupId, UUID userId) {
         groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found"));
 
-        
         GroupMemberId currUser = new GroupMemberId(removedBy, groupId);
         GroupMemberId userToRemove = new GroupMemberId(userId, groupId);
 
-        if(userId.equals(removedBy)) {
+        if (userId.equals(removedBy)) {
+            // Self-leave
             memberRepository.deleteById(userToRemove);
+            locationCache.removeUserFromGroup(userId, groupId); // ✅ also update cache
             return true;
         }
 
-        if(!memberRepository.existsById(currUser) || !isUserAdmin(groupId, removedBy)) {
+        // Only admins can remove users from the group
+        if (!memberRepository.existsById(currUser) || !isUserAdmin(groupId, removedBy)) {
             return false;
-            // throw new RuntimeException("Only admins can remove users from the group");
         }
 
-        if(!memberRepository.existsById(userToRemove)) {
+        // User not in group
+        if (!memberRepository.existsById(userToRemove)) {
             return false;
-            // throw new RuntimeException("User not in group");
         }
 
+        // Remove user
         memberRepository.deleteById(userToRemove);
+        locationCache.removeUserFromGroup(userId, groupId); // ✅ update cache
+
         return true;
+    }
+
+    public UUID getUserIdByEmail(String email) {
+        if(email == null) {
+            throw new RuntimeException("Email cannot be null");
+        }
+        UUID cachedUserId = locationCache.getUserIdByEmail(email);
+        if(cachedUserId == null) {
+            cachedUserId = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"))
+                .getId();
+        }
+        locationCache.mapEmailToUserId(email, cachedUserId);
+        return cachedUserId;
+    }
+
+    public UUID getGroupIdByName(String name, UUID requestingUserId) {
+        if (name == null) {
+            throw new RuntimeException("Group name cannot be null");
+        }
+
+        // 1️⃣ Try cache first
+        UUID cachedGroupId = locationCache.getGroupIdByName(name);
+        if (cachedGroupId == null) {
+            // 2️⃣ Fetch all groupIds where user is a member
+            List<UUID> groupIds = groupRepository.findGroupIdsByUserId(requestingUserId);
+
+            if (groupIds.isEmpty()) {
+                throw new RuntimeException("No groups found for user: " + requestingUserId);
+            }
+
+            // 3️⃣ Now filter by name (since name is not unique, but user should belong to it)
+            cachedGroupId = groupRepository.findByIdInAndName(groupIds, name)
+                    .orElseThrow(() -> new RuntimeException("Group with name '" + name + "' not found for user: " + requestingUserId))
+                    .getId();
+        }
+
+        // 4️⃣ Store in cache (map user -> group)
+        locationCache.mapGrpToUser(requestingUserId, cachedGroupId);
+
+        return cachedGroupId;
     }
 }

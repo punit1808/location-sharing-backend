@@ -1,21 +1,27 @@
 package com.example.location.dto;
 
-import java.util.UUID;
 public class CreateGrp {
-    private String name;
-    private UUID creatorId;
+    private String email;
+    private String grpName;
 
+    
+    public CreateGrp(String email, String grpName) {
+        this.email = email;
+        this.grpName = grpName;
+    }
+    public CreateGrp() {
+    }
+    public String getEmail() {
+        return email;
+    }
+    public void setEmail(String email) {
+        this.email = email;
+    }
     public String getName() {
-        return name;
+        return grpName;
     }
-    public void setName(String name) {
-        this.name = name;
-    }
-    public UUID getCreatorId() {
-        return creatorId;
-    }
-    public void setCreatorId(UUID creatorId) {
-        this.creatorId = creatorId;
+    public void setName(String grpName) {
+        this.grpName = grpName;
     }
 
 }

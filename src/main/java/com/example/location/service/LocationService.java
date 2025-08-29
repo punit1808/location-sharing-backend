@@ -8,6 +8,7 @@ import com.example.location.entity.LocationEntity;
 import com.example.location.kafka.LocationProducer;
 import com.example.location.repository.GroupRepository;
 import com.example.location.repository.LocationRepository;
+
 import org.springframework.stereotype.Service;
 import java.util.*;
 

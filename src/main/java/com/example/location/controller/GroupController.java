@@ -11,6 +11,7 @@ import com.example.location.dto.DeleteGrp;
 
 // from here we can create groups and get users in a group
 
+@CrossOrigin("*")
 @RestController
 @RequestMapping("/group")
 public class GroupController {
@@ -23,7 +24,7 @@ public class GroupController {
 
     @PostMapping("/create")
     public ResponseEntity<GroupEntity> createGroup(@RequestBody CreateGrp createGrp) {
-        UUID creatorId = createGrp.getCreatorId();
+        UUID creatorId = groupService.getUserIdByEmail(createGrp.getEmail());
         String name = createGrp.getName();
         GroupEntity group = groupService.createGroup(name,creatorId);
         return ResponseEntity.ok(group);
@@ -31,9 +32,9 @@ public class GroupController {
 
     @PostMapping("/addUser")
     public ResponseEntity<String> addUserToGroup(@RequestBody AddUser addUs){
-        UUID addedBy = addUs.getAddedBy();
-        UUID groupId = addUs.getGroupId();
-        UUID userId = addUs.getUserId();
+        UUID addedBy = groupService.getUserIdByEmail(addUs.getAddedBy());
+        UUID userId = groupService.getUserIdByEmail(addUs.getUserId());
+        UUID groupId = groupService.getGroupIdByName(addUs.getGroupId(), addedBy);
         String role = addUs.getRole();
 
         groupService.addUserToGroup(addedBy,userId,groupId,role);
@@ -42,13 +43,24 @@ public class GroupController {
 
     @DeleteMapping("/delete")
     public ResponseEntity<String> deleteGroup(@RequestBody DeleteGrp delGrp) {
-        groupService.deleteGroup(delGrp.getGroupId(),delGrp.getUserId());
+        UUID userId = groupService.getUserIdByEmail(delGrp.getUserId());
+        UUID groupId = groupService.getGroupIdByName(delGrp.getGroupId(), userId);
+        Boolean ck=groupService.deleteGroup(groupId,userId);
+        if(!ck) {
+            return ResponseEntity.status(403).body("Only ADMIN can delete group");
+        }
         return ResponseEntity.ok("Group deleted");
     }
 
     @DeleteMapping("/removeUser")
     public ResponseEntity<String> removeUserFromGroup(@RequestBody DeleteGrp delGrp) {
-        groupService.removeUserFromGroup(delGrp.getRemovedBy(),delGrp.getGroupId(), delGrp.getUserId());
+        UUID userId = groupService.getUserIdByEmail(delGrp.getUserId());
+        UUID groupId = groupService.getGroupIdByName(delGrp.getGroupId(), userId);
+        UUID removedBy = groupService.getUserIdByEmail(delGrp.getRemovedBy());
+        Boolean ck=groupService.removeUserFromGroup(removedBy,groupId, userId);
+        if(!ck) {
+            return ResponseEntity.status(403).body("Only ADMIN can remove users");
+        }
         return ResponseEntity.ok("User removed from group");
     }
 
