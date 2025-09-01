@@ -20,4 +20,5 @@ public class UserService {
         locationCache.mapEmailToUserId(user.getEmail(), user.getId());
         return true; 
     }
+
 }

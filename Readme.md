@@ -23,8 +23,8 @@ A **Spring Boot** microservice that streams **real-time user location updates** 
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/your-username/location-service.git
-cd location-service
+git clone https://github.com/punit1808/location-sharing-backend.git
+cd location-sharing-backend
 ```
 
 ### 2. Configure Application Properties

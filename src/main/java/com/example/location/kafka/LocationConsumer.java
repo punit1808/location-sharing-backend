@@ -4,11 +4,16 @@ import com.example.location.entity.LocationEntity;
 
 import java.time.Instant;
 import java.util.*;
+
+import com.example.location.WebSocket.LocationWebSocketHandler;
 import com.example.location.cache.LocationCache;
 import com.example.location.dto.LocationUpdateRequest;  
 import com.example.location.entity.UserEntity;
 import com.example.location.repository.LocationRepository;
 import com.example.location.repository.UserRepository;
+import com.example.location.service.GroupService;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -29,6 +34,21 @@ public class LocationConsumer {
         this.locationRepository = locationRepository;
         this.userRepository = userRepository;
     }
+    @Autowired
+    private LocationWebSocketHandler wsHandler;
+    @Autowired
+    private GroupService groupService;
+
+    public void updateUserLocation(UUID userId, LocationEntity location) {
+        // Save/update in DB here ...
+        List<UUID> Grps=cache.getGrpByUser(userId);
+        if(Grps==null){
+            Grps=groupService.getGroupIdsByUserId(userId);
+        }
+        for(UUID GrpId : Grps){
+            wsHandler.broadcastLocation(GrpId.toString(), location);
+        }
+    }
 
     // stream of locations send by kakfa service
     @KafkaListener(topics = "location-updates", groupId = "location-service")
@@ -44,14 +64,16 @@ public class LocationConsumer {
 
         // update live cache
         cache.updateLocation(req.getUserId(), location);
+        updateUserLocation(req.getUserId(),location);
     }
 
     // flush latest per user every 5 sec
     @Scheduled(fixedRate = 5000)
     @Transactional
     public void flushToDb() {
-        Map<UUID, LocationEntity> latest = cache.getAllLatestLocations();
-        latest.forEach((userId, loc) -> {
+        Map<UUID, LocationEntity> dirty = cache.getDirtyLocations();
+
+        dirty.forEach((userId, loc) -> {
             locationRepository.upsert(
                 userId,
                 loc.getLatitude(),
@@ -59,6 +81,8 @@ public class LocationConsumer {
                 loc.getLastUpdate()
             );
         });
+
+        cache.clearDirty(dirty.keySet()); // clear dirty flags after flush
     }
 
 }

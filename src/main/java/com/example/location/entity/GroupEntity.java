@@ -5,7 +5,12 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "groups")
+@Table(
+    name = "GROUPS",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"created_by", "name"})
+    }
+)
 public class GroupEntity {
     @Id
     @GeneratedValue
@@ -15,16 +20,15 @@ public class GroupEntity {
     @Column(nullable = false)
     private String name;
 
-    public GroupEntity() {
-    }
-
     @ManyToOne
     @JoinColumn(name = "created_by", nullable = false)
     private UserEntity createdBy;
 
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<GroupMemberEntity> members;
-    
+
+    public GroupEntity() {}
+
     public String getName() {
         return name;
     }
@@ -52,5 +56,4 @@ public class GroupEntity {
     public void setMembers(Set<GroupMemberEntity> members) {
         this.members = members;
     }
-
 }

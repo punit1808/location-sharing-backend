@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "group_members")
+@Table(name = "MEMBERS")
 public class GroupMemberEntity {
 
     @EmbeddedId

@@ -20,7 +20,7 @@ public class CreateGrp {
     public String getName() {
         return grpName;
     }
-    public void setName(String grpName) {
+    public void setGrpName(String grpName) {
         this.grpName = grpName;
     }
 

@@ -19,4 +19,6 @@ public interface GroupRepository extends JpaRepository<GroupEntity, UUID> {
     // New one to match both groupIds and name
     Optional<GroupEntity> findByIdInAndName(List<UUID> groupIds, String name);
 
+    boolean existsByNameAndCreatedBy_Id(String name,UUID userId);
+
 }

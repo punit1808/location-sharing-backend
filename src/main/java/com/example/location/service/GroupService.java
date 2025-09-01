@@ -5,11 +5,17 @@ import com.example.location.repository.GroupRepository;
 import org.springframework.stereotype.Service;
 import com.example.location.entity.GroupMemberEntity;
 import com.example.location.entity.GroupMemberId;
+import com.example.location.entity.LocationEntity;
 import com.example.location.entity.UserEntity;
 import com.example.location.repository.GroupMemberRepository;
 import com.example.location.repository.UserRepository;
 import com.example.location.cache.LocationCache;
 import jakarta.transaction.Transactional;
+import com.example.location.dto.GrpNames;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.List;
@@ -20,18 +26,26 @@ public class GroupService {
     private final GroupMemberRepository memberRepository;
     private final UserRepository userRepository;
     private final LocationCache locationCache;
+    private final LocationService locationService;
 
-    public GroupService(GroupRepository groupRepository, GroupMemberRepository memberRepository, UserRepository userRepository, LocationCache locationCache) {
+    public GroupService(GroupRepository groupRepository, GroupMemberRepository memberRepository, UserRepository userRepository, LocationCache locationCache, LocationService locationService) {
         this.groupRepository = groupRepository;
         this.memberRepository = memberRepository;
         this.userRepository = userRepository;
         this.locationCache = locationCache;
+        this.locationService = locationService;
     }
 
     @Transactional
     public GroupEntity createGroup(String name, UUID creatorId) {
         UserEntity creator = userRepository.findById(creatorId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // check if grp with same name already exist in db associated with current creatorId
+        boolean exist = groupRepository.existsByNameAndCreatedBy_Id(name,creatorId);
+        if(exist){
+            throw new RuntimeException("Same Grpname Already Exist");
+        }
 
         GroupEntity group = new GroupEntity();
         group.setName(name);
@@ -84,7 +98,7 @@ public class GroupService {
 
     public boolean isUserAdmin(UUID groupId, UUID userId) {
         Optional<GroupMemberEntity> memberOpt = memberRepository.findById(new GroupMemberId(userId, groupId));
-        return memberOpt.map(member -> "ADMIN".equals(member.getRole())).orElse(false);
+        return memberOpt.map(member -> "Admin".equals(member.getRole())).orElse(false);
     }
 
     @Transactional
@@ -181,4 +195,79 @@ public class GroupService {
 
         return cachedGroupId;
     }
+
+    public List<GrpNames> getGroupsByEmail(String email) {
+        UUID userId = getUserIdByEmail(email);
+        
+        List<UUID> groupIDss = groupRepository.findGroupIdsByUserId(userId);
+        List<GroupEntity> groups = groupRepository.findAllById(groupIDss);
+        List<GrpNames> groupNames = new ArrayList<>();
+        for (GroupEntity group : groups) {
+            groupNames.add(new GrpNames(group.getId(), group.getName()));
+        }
+        // Update cache
+        for (GroupEntity grp : groups) {
+            locationCache.mapGrpToUser(userId, grp.getId());
+        }
+        return groupNames;
+    }
+
+    public List<GroupEntity> getGroupsByEmailEntity(String email) {
+        UUID userId = getUserIdByEmail(email);
+        
+        List<UUID> groupIDss = groupRepository.findGroupIdsByUserId(userId);
+        List<GroupEntity> groups = groupRepository.findAllById(groupIDss);
+        
+        return groups;
+    }
+
+    public List<UUID> getGroupIdsByUserId(UUID userId){
+        return groupRepository.findGroupIdsByUserId(userId);
+    }
+
+    public GroupEntity getGrpById(UUID groupId){
+        return groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+    }
+
+    public List<Map<String, Object>> getGrpUsersWithLocations(String email, UUID groupId) {
+        GroupEntity groupEntity = getGrpById(groupId);
+
+        List<Map<String, Object>> memberData = new ArrayList<>();
+        List<UUID> memberIds = locationCache.getGrpByUser(getUserIdByEmail(email));
+
+        if (memberIds != null && !memberIds.isEmpty()) {
+            for (UUID memberId : memberIds) {
+                LocationEntity loc = locationCache.getUserLocation(memberId);
+                if (loc != null) {
+                    Map<String, Object> userInfo = new HashMap<>();
+                    userInfo.put("email", loc.getUser().getEmail());
+                    userInfo.put("latitude", loc.getLatitude());
+                    userInfo.put("longitude", loc.getLongitude());
+                    userInfo.put("timestamp", loc.getLastUpdate());
+                    memberData.add(userInfo);
+                }
+            }
+        }
+
+        // Fallback to DB if cache is empty
+        if (memberData.isEmpty()) {
+            List<LocationEntity> dbLocations = locationService.getLatestLocationsForGroup(groupEntity);
+
+            for (LocationEntity loc : dbLocations) {
+                UUID uid = loc.getUser().getId();
+                locationCache.updateLocation(uid, loc);
+
+                Map<String, Object> userInfo = new HashMap<>();
+                userInfo.put("email", loc.getUser().getEmail());
+                userInfo.put("latitude", loc.getLatitude());
+                userInfo.put("longitude", loc.getLongitude());
+                userInfo.put("timestamp", loc.getLastUpdate());
+                memberData.add(userInfo);
+            }
+        }
+
+        return memberData;
+    }
+
 }

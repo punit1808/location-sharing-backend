@@ -1,0 +1,83 @@
+package com.example.location.controller;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import com.example.location.dto.LoginUserDto;
+import com.example.location.dto.RegisterUserDto;
+import com.example.location.entity.UserEntity;
+import com.example.location.dto.LoginResponse;
+import com.example.location.service.AuthenticationService;
+import com.example.location.service.JwtService;
+import com.example.location.cache.LocationCache;
+
+import java.util.Optional;
+
+@RequestMapping("/user")
+@RestController
+public class AuthenticationController {
+
+    private final JwtService jwtService;
+
+    private final AuthenticationService authenticationService;
+
+    private final LocationCache locationCache;
+
+    public AuthenticationController(JwtService jwtService, AuthenticationService authenticationService,LocationCache locationCache) {
+        this.jwtService = jwtService;
+        this.authenticationService = authenticationService;
+        this.locationCache = locationCache;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<UserEntity> register(@RequestBody RegisterUserDto registerUserDto) {
+        UserEntity registeredUser = authenticationService.signup(registerUserDto);
+        locationCache.mapEmailToUserId(registeredUser.getEmail(), registeredUser.getId());
+        return ResponseEntity.ok(registeredUser);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> authenticate(@RequestBody LoginUserDto loginUserDto) {
+        // return ResponseEntity.ok("Coming in Authentication Controller");
+        UserEntity authenticatedUser = authenticationService.authenticate(loginUserDto);
+
+        String jwtToken = jwtService.generateToken(authenticatedUser);
+
+        LoginResponse loginResponse = new LoginResponse().setToken(jwtToken).setExpiresIn(jwtService.getExpirationTime()).setFullName(authenticatedUser.getName());
+
+        return ResponseEntity.ok(loginResponse);
+    }
+
+    @GetMapping("/live")
+    public String hello(){
+        return "working";
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
+        Optional<Cookie> optionalCookie = getCookie(request, "jwt-token");
+        if (optionalCookie.isPresent()) {
+            Cookie cookie = optionalCookie.get();
+            String token = cookie.getValue();
+            jwtService.invalidateToken(token);
+            cookie.setMaxAge(0);
+            response.addCookie(cookie);
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    private Optional<Cookie> getCookie(HttpServletRequest request, String name) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookie.getName().equals(name)) {
+                    return Optional.of(cookie);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+}

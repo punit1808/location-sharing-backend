@@ -4,14 +4,15 @@ import com.example.location.entity.GroupEntity;
 import com.example.location.service.GroupService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 import java.util.UUID;
 import com.example.location.dto.CreateGrp;
 import com.example.location.dto.AddUser;
 import com.example.location.dto.DeleteGrp;
+import com.example.location.dto.GrpNames;
 
 // from here we can create groups and get users in a group
 
-@CrossOrigin("*")
 @RestController
 @RequestMapping("/group")
 public class GroupController {
@@ -22,12 +23,23 @@ public class GroupController {
         this.groupService = groupService;
     }
 
+    @GetMapping("/{email}")
+    public ResponseEntity<List<GrpNames>> getGroupsByUserEmail(@PathVariable String email) {
+        UUID userId = groupService.getUserIdByEmail(email);
+        if(userId == null) {
+            return ResponseEntity.status(404).body(java.util.Collections.emptyList());
+        }
+        List<GrpNames> groupNames = groupService.getGroupsByEmail(email);
+        return ResponseEntity.ok(groupNames);
+    }
+
     @PostMapping("/create")
-    public ResponseEntity<GroupEntity> createGroup(@RequestBody CreateGrp createGrp) {
+    public ResponseEntity<GrpNames> createGroup(@RequestBody CreateGrp createGrp) {
         UUID creatorId = groupService.getUserIdByEmail(createGrp.getEmail());
         String name = createGrp.getName();
         GroupEntity group = groupService.createGroup(name,creatorId);
-        return ResponseEntity.ok(group);
+        GrpNames gp=new GrpNames(group.getId(),group.getName());
+        return ResponseEntity.ok(gp);
     }
 
     @PostMapping("/addUser")

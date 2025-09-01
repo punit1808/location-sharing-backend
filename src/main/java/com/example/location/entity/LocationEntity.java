@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "locations")
+@Table(name = "LOCATIONS")
 public class LocationEntity {
 
     @Id

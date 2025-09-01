@@ -3,16 +3,17 @@ package com.example.location.controller;
 
 import com.example.location.dto.LocationUpdateRequest;
 import com.example.location.service.LocationService;
+
 import org.springframework.web.bind.annotation.*;
-import com.example.location.entity.GroupEntity;
 import com.example.location.dto.LocationUpdate;
 import com.example.location.service.GroupService;
 
 
+
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
-@CrossOrigin("*")
 @RestController
 @RequestMapping("/location")
 public class LocationController {
@@ -35,12 +36,9 @@ public class LocationController {
     }
 
     @GetMapping("/{email}/{groupId}")
-    public List<?> getUsersLocation(@PathVariable String email,@PathVariable String groupId) {
-        UUID userId = groupService.getUserIdByEmail(email);
-        UUID groupUUID = groupService.getGroupIdByName(groupId, userId);
-        
-        GroupEntity grpEntity = locationService.getGroupById(groupUUID);  
-        return grpEntity != null ? locationService.getLatestLocationsForGroup(grpEntity) : List.of(); 
+    public List<Map<String, Object>> getGrpData(@PathVariable("email") String email, @PathVariable("groupId") UUID groupId) {
+        return groupService.getGrpUsersWithLocations(email, groupId);
     }
+
 
 }
