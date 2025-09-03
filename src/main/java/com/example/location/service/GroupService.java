@@ -38,34 +38,25 @@ public class GroupService {
         this.locationService = locationService;
     }
 
-    @Transactional
-    public GroupEntity createGroup(String name, UUID creatorId) {
-        UserEntity creator = userRepository.findById(creatorId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    @Transactional 
+    public GroupEntity createGroup(String name, UUID creatorId) { 
+        UserEntity creator = userRepository.findById(creatorId) .orElseThrow(() -> new RuntimeException("User not found")); 
+        // check if grp with same name already exist in db associated with current creatorId 
+        boolean exist = groupRepository.existsByNameAndCreatedBy_Id(name,creatorId); 
+        if(exist){ throw new RuntimeException("Same Grpname Already Exist"); } 
+        GroupEntity group = new GroupEntity(); 
+        group.setName(name); 
+        group.setCreatedBy(creator); 
+        groupRepository.save(group); // ✅ Flush to DB so groupId is available before next query 
+        groupRepository.flush(); 
 
-        // Check if group with same name already exists for this creator
-        boolean exist = groupRepository.existsByNameAndCreatedBy_Id(name, creatorId);
-        if (exist) {
-            throw new RuntimeException("Same group name already exists");
-        }
-
-        // Create group
-        GroupEntity group = new GroupEntity();
-        group.setName(name);
-        group.setCreatedBy(creator);
-
-        groupRepository.saveAndFlush(group); 
-
-        // Add creator as Admin
-        GroupMemberEntity member = new GroupMemberEntity();
-        member.setId(new GroupMemberId(creatorId, group.getId()));
-        member.setGroup(group);
-        member.setUser(creator);
-        member.setRole("Admin");
-
-        group.getMembers().add(member); 
-
-        return groupRepository.save(group);
+        GroupMemberEntity member = new GroupMemberEntity(); member.setId(new GroupMemberId(group.getId(), creatorId)); 
+        // ✅ set composite key
+        member.setGroup(group); 
+        member.setUser(creator); 
+        member.setRole("Admin"); 
+        memberRepository.save(member); 
+        return group; 
     }
 
 
