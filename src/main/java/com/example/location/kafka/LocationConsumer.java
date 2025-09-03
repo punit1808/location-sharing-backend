@@ -41,10 +41,8 @@ public class LocationConsumer {
 
     public void updateUserLocation(UUID userId, LocationEntity location) {
         // Save/update in DB here ...
-        List<UUID> Grps=cache.getGrpByUser(userId);
-        if(Grps==null){
-            Grps=groupService.getGroupIdsByUserId(userId);
-        }
+        List<UUID> Grps=groupService.getGroupIdsByUserId(userId);
+        
         for(UUID GrpId : Grps){
             wsHandler.broadcastLocation(GrpId.toString(), location);
         }

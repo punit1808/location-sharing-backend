@@ -40,7 +40,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests((authorize) ->
                         authorize.requestMatchers("/user/register").permitAll()
                                 .requestMatchers("/user/login").permitAll()
-                                .requestMatchers("/user/auth/live").permitAll()
+                                .requestMatchers("/user/live").permitAll()
                                 .requestMatchers("/ws/**").permitAll()
                                 .anyRequest().authenticated()
 
@@ -57,7 +57,7 @@ public class SecurityConfiguration {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of("https://location-sharing-frontend-red.vercel.app","https://location-sharing-frontend-cra36btf9-punit1808s-projects.vercel.app"));
+        configuration.setAllowedOrigins(List.of("https://location-sharing-frontend-red.vercel.app","https://location-sharing-frontend-cra36btf9-punit1808s-projects.vercel.app","location-sharing-frontend-git-main-punit1808s-projects.vercel.app"));
         configuration.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization","Content-Type"));
         configuration.setAllowCredentials(true);

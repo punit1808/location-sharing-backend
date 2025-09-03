@@ -1,24 +1,26 @@
 package com.example.location.service;
 
-import com.example.location.entity.GroupEntity;
-import com.example.location.repository.GroupRepository;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
 import org.springframework.stereotype.Service;
+
+import com.example.location.cache.LocationCache;
+import com.example.location.dto.GrpNames;
+import com.example.location.entity.GroupEntity;
 import com.example.location.entity.GroupMemberEntity;
 import com.example.location.entity.GroupMemberId;
 import com.example.location.entity.LocationEntity;
 import com.example.location.entity.UserEntity;
 import com.example.location.repository.GroupMemberRepository;
+import com.example.location.repository.GroupRepository;
 import com.example.location.repository.UserRepository;
-import com.example.location.cache.LocationCache;
-import jakarta.transaction.Transactional;
-import com.example.location.dto.GrpNames;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.List;
+import jakarta.transaction.Transactional;
 
 @Service
 public class GroupService {
@@ -41,32 +43,31 @@ public class GroupService {
         UserEntity creator = userRepository.findById(creatorId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // check if grp with same name already exist in db associated with current creatorId
-        boolean exist = groupRepository.existsByNameAndCreatedBy_Id(name,creatorId);
-        if(exist){
-            throw new RuntimeException("Same Grpname Already Exist");
+        // Check if group with same name already exists for this creator
+        boolean exist = groupRepository.existsByNameAndCreatedBy_Id(name, creatorId);
+        if (exist) {
+            throw new RuntimeException("Same group name already exists");
         }
 
+        // Create group
         GroupEntity group = new GroupEntity();
         group.setName(name);
         group.setCreatedBy(creator);
 
-        groupRepository.save(group);
+        groupRepository.saveAndFlush(group); 
 
-        // ✅ Flush to DB so groupId is available before next query
-        groupRepository.flush();
-        locationCache.mapGrpToUser(creatorId, group.getId());
-
+        // Add creator as Admin
         GroupMemberEntity member = new GroupMemberEntity();
-        member.setId(new GroupMemberId(group.getId(), creatorId)); // ✅ set composite key
+        member.setId(new GroupMemberId(creatorId, group.getId()));
         member.setGroup(group);
         member.setUser(creator);
-        member.setRole("ADMIN");
+        member.setRole("Admin");
 
-        memberRepository.save(member);
+        group.getMembers().add(member); 
 
-        return group;
+        return groupRepository.save(group);
     }
+
 
     @Transactional
     public void addUserToGroup(UUID creatorId, UUID userId, UUID groupId, String role) {
@@ -88,8 +89,6 @@ public class GroupService {
         member.setRole(role);
 
         memberRepository.save(member);
-        locationCache.mapGrpToUser(userId, group.getId());
-
     }
 
     public boolean isUserInGroup(UUID groupId, UUID userId) {
@@ -106,22 +105,21 @@ public class GroupService {
         GroupEntity group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found"));
 
-        GroupMemberId currUser = new GroupMemberId(requesterId, groupId);
-
-        if (!memberRepository.existsById(currUser) || !isUserAdmin(groupId, requesterId)) {
+        if (!isUserAdmin(groupId, requesterId)) {
             throw new RuntimeException("Only admins can delete the group");
         }
-
-        // 1️⃣ Delete from DB
-        memberRepository.deleteAllByGroupId(groupId);
         groupRepository.delete(group);
-
-        // 2️⃣ Clean up cache
-        // remove all members belonging to this group
-        locationCache.removeGroup(groupId);
 
         return true;
     }
+
+    public boolean isCreator(UUID groupId, UUID userId) {
+    GroupEntity group = groupRepository.findById(groupId)
+            .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        return group.getCreatedBy().getId().equals(userId);
+    }
+
 
     @Transactional
     public boolean removeUserFromGroup(UUID removedBy, UUID groupId, UUID userId) {
@@ -134,12 +132,11 @@ public class GroupService {
         if (userId.equals(removedBy)) {
             // Self-leave
             memberRepository.deleteById(userToRemove);
-            locationCache.removeUserFromGroup(userId, groupId); // ✅ also update cache
             return true;
         }
 
-        // Only admins can remove users from the group
-        if (!memberRepository.existsById(currUser) || !isUserAdmin(groupId, removedBy)) {
+        // Only admins can remove users from the group and creator cant be removed
+        if (!memberRepository.existsById(currUser) || !isUserAdmin(groupId, removedBy) || !isCreator(groupId,userId)) {
             return false;
         }
 
@@ -150,7 +147,6 @@ public class GroupService {
 
         // Remove user
         memberRepository.deleteById(userToRemove);
-        locationCache.removeUserFromGroup(userId, groupId); // ✅ update cache
 
         return true;
     }
@@ -174,24 +170,17 @@ public class GroupService {
             throw new RuntimeException("Group name cannot be null");
         }
 
-        // 1️⃣ Try cache first
-        UUID cachedGroupId = locationCache.getGroupIdByName(name);
-        if (cachedGroupId == null) {
-            // 2️⃣ Fetch all groupIds where user is a member
-            List<UUID> groupIds = groupRepository.findGroupIdsByUserId(requestingUserId);
+        // 2️⃣ Fetch all groupIds where user is a member
+        List<UUID> groupIds = groupRepository.findGroupIdsByUserId(requestingUserId);
 
-            if (groupIds.isEmpty()) {
-                throw new RuntimeException("No groups found for user: " + requestingUserId);
-            }
-
-            // 3️⃣ Now filter by name (since name is not unique, but user should belong to it)
-            cachedGroupId = groupRepository.findByIdInAndName(groupIds, name)
-                    .orElseThrow(() -> new RuntimeException("Group with name '" + name + "' not found for user: " + requestingUserId))
-                    .getId();
+        if (groupIds.isEmpty()) {
+            throw new RuntimeException("No groups found for user: " + requestingUserId);
         }
 
-        // 4️⃣ Store in cache (map user -> group)
-        locationCache.mapGrpToUser(requestingUserId, cachedGroupId);
+        // 3️⃣ Now filter by name (since name is not unique, but user should belong to it)
+        UUID cachedGroupId = groupRepository.findByIdInAndName(groupIds, name)
+                .orElseThrow(() -> new RuntimeException("Group with name '" + name + "' not found for user: " + requestingUserId))
+                .getId();
 
         return cachedGroupId;
     }
@@ -204,10 +193,6 @@ public class GroupService {
         List<GrpNames> groupNames = new ArrayList<>();
         for (GroupEntity group : groups) {
             groupNames.add(new GrpNames(group.getId(), group.getName()));
-        }
-        // Update cache
-        for (GroupEntity grp : groups) {
-            locationCache.mapGrpToUser(userId, grp.getId());
         }
         return groupNames;
     }
@@ -234,39 +219,20 @@ public class GroupService {
         GroupEntity groupEntity = getGrpById(groupId);
 
         List<Map<String, Object>> memberData = new ArrayList<>();
-        List<UUID> memberIds = locationCache.getGrpByUser(getUserIdByEmail(email));
+        List<LocationEntity> dbLocations = locationService.getLatestLocationsForGroup(groupEntity);
 
-        if (memberIds != null && !memberIds.isEmpty()) {
-            for (UUID memberId : memberIds) {
-                LocationEntity loc = locationCache.getUserLocation(memberId);
-                if (loc != null) {
-                    Map<String, Object> userInfo = new HashMap<>();
-                    userInfo.put("email", loc.getUser().getEmail());
-                    userInfo.put("latitude", loc.getLatitude());
-                    userInfo.put("longitude", loc.getLongitude());
-                    userInfo.put("timestamp", loc.getLastUpdate());
-                    memberData.add(userInfo);
-                }
-            }
+        for (LocationEntity loc : dbLocations) {
+            UUID uid = loc.getUser().getId();
+            locationCache.updateLocation(uid, loc);
+
+            Map<String, Object> userInfo = new HashMap<>();
+            userInfo.put("email", loc.getUser().getEmail());
+            userInfo.put("latitude", loc.getLatitude());
+            userInfo.put("longitude", loc.getLongitude());
+            userInfo.put("timestamp", loc.getLastUpdate());
+            memberData.add(userInfo);
         }
-
-        // Fallback to DB if cache is empty
-        if (memberData.isEmpty()) {
-            List<LocationEntity> dbLocations = locationService.getLatestLocationsForGroup(groupEntity);
-
-            for (LocationEntity loc : dbLocations) {
-                UUID uid = loc.getUser().getId();
-                locationCache.updateLocation(uid, loc);
-
-                Map<String, Object> userInfo = new HashMap<>();
-                userInfo.put("email", loc.getUser().getEmail());
-                userInfo.put("latitude", loc.getLatitude());
-                userInfo.put("longitude", loc.getLongitude());
-                userInfo.put("timestamp", loc.getLastUpdate());
-                memberData.add(userInfo);
-            }
-        }
-
+        
         return memberData;
     }
 
