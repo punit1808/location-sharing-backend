@@ -14,6 +14,7 @@ target/
 .springBeans
 .sts4-cache
 src/main/resources/certs/client.truststore.jks
+src/main/resources/certs/client.truststore.b64
 
 ### IntelliJ IDEA ###
 .idea

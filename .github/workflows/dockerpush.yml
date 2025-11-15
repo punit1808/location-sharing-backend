@@ -5,16 +5,21 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Decode Aiven Truststore
+      run: |
+        echo "${{ secrets.AIVEN_SECRET_B64 }}" | base64 -d > client.truststore.jks
+
     - name: Build Image
       run: docker build . -t ${{secrets.DOCKER_USERNAME}}/findme
+
     - name: Docker Login
       run: echo "${{secrets.ACCESS_TOKEN}}" | docker login -u ${{secrets.DOCKER_USERNAME}} --password-stdin
+
     - name: Push Image
       run: docker push ${{secrets.DOCKER_USERNAME}}/findme

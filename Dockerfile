@@ -12,7 +12,7 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar demo.jar
 
 # Copy the truststore explicitly to /app/certs
-COPY src/main/resources/certs/client.truststore.jks /app/certs/client.truststore.jks
+COPY ./client.truststore.jks /app/certs/client.truststore.jks
 
 EXPOSE 8800
 ENTRYPOINT ["java","-jar","demo.jar"]
