@@ -13,9 +13,10 @@ A **Spring Boot** microservice that streams **real-time user location updates** 
 - Java 17  
 - Spring Boot 3.x  
 - Spring Kafka  
-- PostgreSQL (Neon/Aiven)  
+- PostgreSQL (Aiven)  
 - Kafka (Aiven)  
 - Docker + Render  
+- Git Actions
 
 ---
 
