@@ -46,7 +46,7 @@ spring.jpa.properties.hibernate.format_sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 
 # -------------------
-# Kafka (Aiven)
+# Kafka Service (Aiven)
 # -------------------
 spring.kafka.bootstrap-servers=${KAFKA_BOOTSTRAP_URL}
 
