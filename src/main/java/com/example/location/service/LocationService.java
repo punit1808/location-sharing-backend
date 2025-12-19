@@ -8,7 +8,6 @@ import com.example.location.entity.LocationEntity;
 import com.example.location.kafka.LocationProducer;
 import com.example.location.repository.GroupRepository;
 import com.example.location.repository.LocationRepository;
-import com.example.location.kafka.LocationConsumer;
 
 import org.springframework.stereotype.Service;
 import java.util.*;
@@ -20,23 +19,19 @@ public class LocationService {
     private final LocationRepository locationRepository;
     private final GroupRepository groupRepository;
     private final LocationProducer producer;
-    private final LocationConsumer consumer;
 
     public LocationService(LocationCache cache,
                            LocationRepository locationRepository,
                            GroupRepository groupRepository,
-                           LocationProducer producer,
-                           LocationConsumer consumer) {
+                           LocationProducer producer) {
         this.cache = cache;
         this.locationRepository = locationRepository;
         this.groupRepository = groupRepository;
         this.producer = producer;
-        this.consumer = consumer;
     }
 
     public void publishLocation(LocationUpdateRequest req) {
         producer.send(req);
-        consumer.consume(req);
     }
 
     public Optional<LocationEntity> getLatestLocation(UUID userId) {

@@ -7,6 +7,7 @@ import com.example.location.service.LocationService;
 import org.springframework.web.bind.annotation.*;
 import com.example.location.dto.LocationUpdate;
 import com.example.location.service.GroupService;
+import com.example.location.kafka.LocationConsumer;
 
 
 
@@ -21,11 +22,13 @@ public class LocationController {
 
     private final LocationService locationService;
     private final GroupService groupService;
+    private final LocationConsumer locationConsumer;
 
 
-    public LocationController(LocationService locationService, GroupService groupService) {
+    public LocationController(LocationService locationService, GroupService groupService, LocationConsumer locationConsumer) {
         this.locationService = locationService;
         this.groupService = groupService;
+        this.locationConsumer = locationConsumer;
     }
 
     @PostMapping("/update")
@@ -33,6 +36,7 @@ public class LocationController {
         UUID userId = groupService.getUserIdByEmail(request.getUserId());
         LocationUpdateRequest locationUpdateRequest = new LocationUpdateRequest(userId, request.getLat(), request.getLng());
         locationService.publishLocation(locationUpdateRequest);
+        locationConsumer.consume(locationUpdateRequest);
     }
 
     @GetMapping("/{email}/{groupId}")
