@@ -5,7 +5,6 @@ import com.example.location.dto.LocationUpdateRequest;
 import com.example.location.entity.GroupEntity;
 import com.example.location.entity.GroupMemberEntity;
 import com.example.location.entity.LocationEntity;
-import com.example.location.kafka.LocationProducer;
 import com.example.location.repository.GroupRepository;
 import com.example.location.repository.LocationRepository;
 
@@ -18,20 +17,17 @@ public class LocationService {
     private final LocationCache cache;
     private final LocationRepository locationRepository;
     private final GroupRepository groupRepository;
-    private final LocationProducer producer;
 
     public LocationService(LocationCache cache,
                            LocationRepository locationRepository,
-                           GroupRepository groupRepository,
-                           LocationProducer producer) {
+                           GroupRepository groupRepository) {
         this.cache = cache;
         this.locationRepository = locationRepository;
         this.groupRepository = groupRepository;
-        this.producer = producer;
     }
 
     public void publishLocation(LocationUpdateRequest req) {
-        producer.send(req);
+        // producer.send(req);
     }
 
     public Optional<LocationEntity> getLatestLocation(UUID userId) {

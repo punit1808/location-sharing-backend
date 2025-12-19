@@ -2,17 +2,17 @@
 package com.example.location.config;
 
 
-import org.apache.kafka.clients.admin.NewTopic;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+// import org.apache.kafka.clients.admin.NewTopic;
+// import org.springframework.beans.factory.annotation.Value;
+// import org.springframework.context.annotation.Bean;
+// import org.springframework.context.annotation.Configuration;
 
 
-@Configuration
+// @Configuration
 public class KafkaConfig {
-    @Bean
-    public NewTopic locationTopic(@Value("location-updates") String name) {
+    // @Bean
+    // public NewTopic locationTopic(@Value("location-updates") String name) {
        
-        return new NewTopic(name, 6, (short)1);
-    }
+    //     return new NewTopic(name, 6, (short)1);
+    // }
 }

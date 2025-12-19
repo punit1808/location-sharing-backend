@@ -14,7 +14,7 @@ import com.example.location.repository.UserRepository;
 import com.example.location.service.GroupService;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.annotation.KafkaListener;
+// import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,7 +48,7 @@ public class LocationConsumer {
         }
     }
 
-    @KafkaListener(topics = "location-updates", groupId = "location-service")
+    // @KafkaListener(topics = "location-updates", groupId = "location-service")
     public void consume(LocationUpdateRequest req) {
         UserEntity user = userRepository.findById(req.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found: " + req.getUserId()));
@@ -59,12 +59,10 @@ public class LocationConsumer {
         location.setLongitude(req.getLng());
         location.setLastUpdate(Instant.now());
 
-        // update live cache
         cache.updateLocation(req.getUserId(), location);
         updateUserLocation(req.getUserId(),location);
     }
 
-    // flush latest per user every 5 sec
     @Scheduled(fixedRate = 5000)
     @Transactional
     public void flushToDb() {
@@ -79,7 +77,7 @@ public class LocationConsumer {
             );
         });
 
-        cache.clearDirty(dirty.keySet()); // clear dirty flags after flush
+        cache.clearDirty(dirty.keySet());
     }
 
 }
