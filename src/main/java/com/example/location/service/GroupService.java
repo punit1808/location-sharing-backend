@@ -41,17 +41,17 @@ public class GroupService {
     @Transactional 
     public GroupEntity createGroup(String name, UUID creatorId) { 
         UserEntity creator = userRepository.findById(creatorId) .orElseThrow(() -> new RuntimeException("User not found")); 
-        // check if grp with same name already exist in db associated with current creatorId 
+        
         boolean exist = groupRepository.existsByNameAndCreatedBy_Id(name,creatorId); 
         if(exist){ throw new RuntimeException("Same Grpname Already Exist"); } 
         GroupEntity group = new GroupEntity(); 
         group.setName(name); 
         group.setCreatedBy(creator); 
-        groupRepository.save(group); // ✅ Flush to DB so groupId is available before next query 
+        groupRepository.save(group); 
         groupRepository.flush(); 
 
         GroupMemberEntity member = new GroupMemberEntity(); member.setId(new GroupMemberId(group.getId(), creatorId)); 
-        // ✅ set composite key
+        
         member.setGroup(group); 
         member.setUser(creator); 
         member.setRole("Admin"); 
@@ -74,7 +74,7 @@ public class GroupService {
         }
 
         GroupMemberEntity member = new GroupMemberEntity();
-        member.setId(new GroupMemberId(group.getId(), user.getId())); // ✅ set composite key
+        member.setId(new GroupMemberId(group.getId(), user.getId())); 
         member.setGroup(group);
         member.setUser(user);
         member.setRole(role);
@@ -114,6 +114,7 @@ public class GroupService {
 
     @Transactional
     public boolean removeUserFromGroup(UUID removedBy, UUID groupId, UUID userId) {
+
         groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found"));
 
@@ -121,26 +122,25 @@ public class GroupService {
         GroupMemberId userToRemove = new GroupMemberId(userId, groupId);
 
         if (userId.equals(removedBy)) {
-            // Self-leave
+            if (isCreator(groupId, removedBy)) return false;
             memberRepository.deleteById(userToRemove);
             return true;
         }
 
-        // Only admins can remove users from the group and creator cant be removed
-        if (!memberRepository.existsById(currUser) || !isUserAdmin(groupId, removedBy) || !isCreator(groupId,userId)) {
+        if (!memberRepository.existsById(currUser)
+            || !isUserAdmin(groupId, removedBy)
+            || isCreator(groupId, userId)) {
             return false;
         }
 
-        // User not in group
         if (!memberRepository.existsById(userToRemove)) {
             return false;
         }
 
-        // Remove user
         memberRepository.deleteById(userToRemove);
-
         return true;
     }
+
 
     public UUID getUserIdByEmail(String email) {
         if(email == null) {
@@ -161,14 +161,12 @@ public class GroupService {
             throw new RuntimeException("Group name cannot be null");
         }
 
-        // 2️⃣ Fetch all groupIds where user is a member
         List<UUID> groupIds = groupRepository.findGroupIdsByUserId(requestingUserId);
 
         if (groupIds.isEmpty()) {
             throw new RuntimeException("No groups found for user: " + requestingUserId);
         }
 
-        // 3️⃣ Now filter by name (since name is not unique, but user should belong to it)
         UUID cachedGroupId = groupRepository.findByIdInAndName(groupIds, name)
                 .orElseThrow(() -> new RuntimeException("Group with name '" + name + "' not found for user: " + requestingUserId))
                 .getId();

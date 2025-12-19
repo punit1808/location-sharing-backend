@@ -48,7 +48,6 @@ public class LocationConsumer {
         }
     }
 
-    // stream of locations send by kakfa service
     @KafkaListener(topics = "location-updates", groupId = "location-service")
     public void consume(LocationUpdateRequest req) {
         UserEntity user = userRepository.findById(req.getUserId())

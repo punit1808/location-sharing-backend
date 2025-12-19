@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 public class KafkaConfig {
     @Bean
     public NewTopic locationTopic(@Value("location-updates") String name) {
-        // 6 partitions example; adjust as needed
+       
         return new NewTopic(name, 6, (short)1);
     }
 }

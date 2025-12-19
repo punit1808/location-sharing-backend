@@ -8,6 +8,7 @@ import com.example.location.entity.LocationEntity;
 import com.example.location.kafka.LocationProducer;
 import com.example.location.repository.GroupRepository;
 import com.example.location.repository.LocationRepository;
+import com.example.location.kafka.LocationConsumer;
 
 import org.springframework.stereotype.Service;
 import java.util.*;
@@ -19,31 +20,31 @@ public class LocationService {
     private final LocationRepository locationRepository;
     private final GroupRepository groupRepository;
     private final LocationProducer producer;
+    private final LocationConsumer consumer;
 
     public LocationService(LocationCache cache,
                            LocationRepository locationRepository,
                            GroupRepository groupRepository,
-                           LocationProducer producer) {
+                           LocationProducer producer,
+                           LocationConsumer consumer) {
         this.cache = cache;
         this.locationRepository = locationRepository;
         this.groupRepository = groupRepository;
         this.producer = producer;
+        this.consumer = consumer;
     }
 
-    // 1️⃣ Publish location update to Kafka --> coming from controller
     public void publishLocation(LocationUpdateRequest req) {
         producer.send(req);
+        consumer.consume(req);
     }
 
-    // 2️⃣ Get latest location of a single user (cache → DB fallback)
     public Optional<LocationEntity> getLatestLocation(UUID userId) {
-    // First check live cache
         LocationEntity live = cache.getUserLocation(userId);
         if (live != null) {
             return Optional.of(live);
         }
 
-        // Fallback to DB
         return locationRepository.findTopByUserIdOrderByLastUpdateDesc(userId);
     }
 
@@ -51,8 +52,6 @@ public class LocationService {
         return groupRepository.findById(groupId).orElse(null);
     }
 
-
-    // 3️⃣ Get latest locations of all users in a group
     public List<LocationEntity> getLatestLocationsForGroup(GroupEntity group) {
         List<LocationEntity> locations = new ArrayList<>();
 
