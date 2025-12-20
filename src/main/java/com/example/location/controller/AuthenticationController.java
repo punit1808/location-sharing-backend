@@ -32,6 +32,13 @@ public class AuthenticationController {
         this.locationCache = locationCache;
     }
 
+    @GetMapping("/valid")
+    public ResponseEntity<Boolean> validateToken(HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        boolean isValid = jwtService.validateToken(token);
+        return ResponseEntity.ok(isValid);
+    }
+
     @PostMapping("/register")
     public ResponseEntity<UserEntity> register(@RequestBody RegisterUserDto registerUserDto) {
         UserEntity registeredUser = authenticationService.signup(registerUserDto);
