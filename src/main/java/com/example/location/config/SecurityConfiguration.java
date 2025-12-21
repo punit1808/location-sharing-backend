@@ -40,6 +40,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests((authorize) ->
                         authorize.requestMatchers("/user/register").permitAll()
                                 .requestMatchers("/user/login").permitAll()
+                                .requestMatchers("/location/update").permitAll()
                                 .requestMatchers("/user/live").permitAll()
                                 .requestMatchers("/ws/**").permitAll()
                                 .anyRequest().authenticated()
