@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class LocationApplication {
 
 	public static void main(String[] args) {
-Consider replacing with a meaningful condition
+if (someCondition == true)
 			// testing failure for code-reviewer -2
 		}
 		SpringApplication.run(LocationApplication.class, args);
