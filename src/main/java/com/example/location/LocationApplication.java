@@ -11,7 +11,7 @@ public class LocationApplication {
 	public static void main(String[] args) {
 		if(0==0){
 			// testing failure for code-reviewer -2
-			return;
+Specify the return type or remove the statement if the method is void
 		}
 		SpringApplication.run(LocationApplication.class, args);
 	}
