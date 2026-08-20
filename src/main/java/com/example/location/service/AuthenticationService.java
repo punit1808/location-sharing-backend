@@ -56,4 +56,9 @@ public class AuthenticationService {
 
         return users;
     }
+
+    public void pingDB(){
+        userRepository.pingDB();
+        return ;
+    }
 }
