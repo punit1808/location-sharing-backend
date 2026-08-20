@@ -34,6 +34,7 @@ public class AuthenticationController {
 
     @GetMapping("/valid")
     public ResponseEntity<Boolean> validateToken(HttpServletRequest request) {
+        authenticationService.pingDB();
         return ResponseEntity.ok(true);
     }
 
